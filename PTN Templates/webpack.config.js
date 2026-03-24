@@ -64,10 +64,6 @@ module.exports = async (env, options) => {
       ],
     },
     plugins: [
-      new webpack.DefinePlugin({
-        "process.env.PTN_API_KEY": JSON.stringify(process.env.PTN_API_KEY || ""),
-        "process.env.PTN_AUTH_TOKEN": JSON.stringify(process.env.PTN_AUTH_TOKEN || ""),
-      }),
       new HtmlWebpackPlugin({
         filename: "taskpane.html",
         template: "./src/taskpane/taskpane.html",
