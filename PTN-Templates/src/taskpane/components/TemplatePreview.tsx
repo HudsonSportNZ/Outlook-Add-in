@@ -201,15 +201,41 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({ template, onBack }) =
         });
       }
 
-      await new Promise<void>((resolve, reject) => {
-        item.body.setAsync(resolvedBody, { coercionType: Office.CoercionType.Html }, (result) => {
+      // Use prependAsync on replies/forwards to preserve quoted history;
+      // fall back to setAsync for new messages (where the body is empty).
+      const existingBody = await new Promise<string>((resolve, reject) => {
+        item.body.getAsync(Office.CoercionType.Html, (result) => {
           if (result.status === Office.AsyncResultStatus.Failed) {
             reject(new Error(result.error.message));
           } else {
-            resolve();
+            resolve(result.value ?? "");
           }
         });
       });
+
+      const bodyIsEmpty = !existingBody || existingBody.replace(/<[^>]*>/g, "").trim() === "";
+
+      if (bodyIsEmpty) {
+        await new Promise<void>((resolve, reject) => {
+          item.body.setAsync(resolvedBody, { coercionType: Office.CoercionType.Html }, (result) => {
+            if (result.status === Office.AsyncResultStatus.Failed) {
+              reject(new Error(result.error.message));
+            } else {
+              resolve();
+            }
+          });
+        });
+      } else {
+        await new Promise<void>((resolve, reject) => {
+          item.body.prependAsync(resolvedBody, { coercionType: Office.CoercionType.Html }, (result) => {
+            if (result.status === Office.AsyncResultStatus.Failed) {
+              reject(new Error(result.error.message));
+            } else {
+              resolve();
+            }
+          });
+        });
+      }
 
       setInserted(true);
       setTimeout(() => {
