@@ -30,7 +30,6 @@ const useStyles = makeStyles({
     overflowX: "auto",
     borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
     scrollbarWidth: "none",
-    "::-webkit-scrollbar": { display: "none" },
     flexShrink: 0,
   },
   pill: {
@@ -54,7 +53,7 @@ const useStyles = makeStyles({
   pillActive: {
     backgroundColor: "#1a1a2e",
     color: tokens.colorNeutralForegroundOnBrand,
-    borderColor: "#1a1a2e",
+    border: "1px solid #1a1a2e",
     ":hover": {
       backgroundColor: "#16213e",
     },

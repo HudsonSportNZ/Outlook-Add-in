@@ -133,7 +133,7 @@ const useStyles = makeStyles({
 
 function detectMergeFields(body: string): string[] {
   const matches = body.match(/\{\{([^}]+)\}\}/g) || [];
-  return [...new Set(matches.map((m) => m.replace(/\{\{|\}\}/g, "").trim()))];
+  return Array.from(new Set(matches.map((m) => m.replace(/\{\{|\}\}/g, "").trim())));
 }
 
 const TemplatePreview: React.FC<TemplatePreviewProps> = ({ template, onBack }) => {
