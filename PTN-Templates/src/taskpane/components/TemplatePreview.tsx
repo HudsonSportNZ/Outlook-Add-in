@@ -178,15 +178,28 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({ template, onBack }) =
       const resolvedSubject = applyMergeFields(template.subject, mergeValues);
       const resolvedBody = applyMergeFields(template.body, mergeValues);
 
-      await new Promise<void>((resolve, reject) => {
-        item.subject.setAsync(resolvedSubject, (result) => {
+      // Only set subject on new messages — leave it alone for replies/forwards
+      const currentSubject = await new Promise<string>((resolve, reject) => {
+        item.subject.getAsync((result) => {
           if (result.status === Office.AsyncResultStatus.Failed) {
             reject(new Error(result.error.message));
           } else {
-            resolve();
+            resolve(result.value ?? "");
           }
         });
       });
+
+      if (!currentSubject.trim()) {
+        await new Promise<void>((resolve, reject) => {
+          item.subject.setAsync(resolvedSubject, (result) => {
+            if (result.status === Office.AsyncResultStatus.Failed) {
+              reject(new Error(result.error.message));
+            } else {
+              resolve();
+            }
+          });
+        });
+      }
 
       await new Promise<void>((resolve, reject) => {
         item.body.setAsync(resolvedBody, { coercionType: Office.CoercionType.Html }, (result) => {
