@@ -25,14 +25,11 @@ const useStyles = makeStyles({
   categoryRow: {
     display: "flex",
     flexDirection: "row",
-    flexWrap: "nowrap",
+    flexWrap: "wrap",
     gap: "6px",
     padding: "8px 12px",
-    overflowX: "auto",
     borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
-    scrollbarWidth: "none",
     flexShrink: 0,
-    msOverflowStyle: "none",
   },
   pill: {
     display: "inline-flex",
