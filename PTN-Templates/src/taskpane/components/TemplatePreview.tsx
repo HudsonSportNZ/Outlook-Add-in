@@ -1,7 +1,7 @@
 /* global Office */
 
 import * as React from "react";
-import { Button, Badge, Text, makeStyles, tokens } from "@fluentui/react-components";
+import { Button, Badge, Input, Text, makeStyles, tokens } from "@fluentui/react-components";
 import { ArrowLeft24Regular, Checkmark24Regular } from "@fluentui/react-icons";
 import { Template } from "../types/template";
 
@@ -91,7 +91,7 @@ const useStyles = makeStyles({
   mergeFieldsSection: {
     display: "flex",
     flexDirection: "column",
-    gap: "6px",
+    gap: "8px",
   },
   mergeLabel: {
     fontSize: tokens.fontSizeBase200,
@@ -100,10 +100,18 @@ const useStyles = makeStyles({
     textTransform: "uppercase",
     letterSpacing: "0.04em",
   },
-  mergeFields: {
+  mergeField: {
     display: "flex",
-    flexWrap: "wrap",
-    gap: "4px",
+    flexDirection: "column",
+    gap: "3px",
+  },
+  mergeFieldLabel: {
+    fontSize: tokens.fontSizeBase200,
+    color: tokens.colorNeutralForeground2,
+    fontWeight: tokens.fontWeightSemibold,
+  },
+  mergeFieldInput: {
+    width: "100%",
   },
   actionRow: {
     display: "flex",
@@ -136,6 +144,14 @@ function detectMergeFields(body: string): string[] {
   return Array.from(new Set(matches.map((m) => m.replace(/\{\{|\}\}/g, "").trim())));
 }
 
+function applyMergeFields(text: string, values: Record<string, string>): string {
+  return text.replace(/\{\{([^}]+)\}\}/g, (_match, key) => values[key.trim()] || _match);
+}
+
+function formatFieldLabel(field: string): string {
+  return field.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 const TemplatePreview: React.FC<TemplatePreviewProps> = ({ template, onBack }) => {
   const styles = useStyles();
   const [inserted, setInserted] = React.useState(false);
@@ -144,6 +160,14 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({ template, onBack }) =
 
   const mergeFields = React.useMemo(() => detectMergeFields(template.body), [template.body]);
 
+  const [mergeValues, setMergeValues] = React.useState<Record<string, string>>(() =>
+    Object.fromEntries(mergeFields.map((f) => [f, ""]))
+  );
+
+  const setFieldValue = (field: string, value: string) => {
+    setMergeValues((prev) => ({ ...prev, [field]: value }));
+  };
+
   const handleInsert = async () => {
     setInserting(true);
     setInsertError(null);
@@ -151,8 +175,11 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({ template, onBack }) =
       const item = Office.context.mailbox.item;
       if (!item) throw new Error("No active compose item");
 
+      const resolvedSubject = applyMergeFields(template.subject, mergeValues);
+      const resolvedBody = applyMergeFields(template.body, mergeValues);
+
       await new Promise<void>((resolve, reject) => {
-        item.subject.setAsync(template.subject, (result) => {
+        item.subject.setAsync(resolvedSubject, (result) => {
           if (result.status === Office.AsyncResultStatus.Failed) {
             reject(new Error(result.error.message));
           } else {
@@ -162,7 +189,7 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({ template, onBack }) =
       });
 
       await new Promise<void>((resolve, reject) => {
-        item.body.setAsync(template.body, { coercionType: Office.CoercionType.Html }, (result) => {
+        item.body.setAsync(resolvedBody, { coercionType: Office.CoercionType.Html }, (result) => {
           if (result.status === Office.AsyncResultStatus.Failed) {
             reject(new Error(result.error.message));
           } else {
@@ -214,22 +241,24 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({ template, onBack }) =
           <Text className={styles.subjectLabel} style={{ display: "block", marginBottom: "6px" }}>
             Body Preview
           </Text>
-          <div
-            className={styles.bodyCard}
-            dangerouslySetInnerHTML={{ __html: template.body }}
-          />
+          <div className={styles.bodyCard} dangerouslySetInnerHTML={{ __html: template.body }} />
         </div>
 
         {mergeFields.length > 0 && (
           <div className={styles.mergeFieldsSection}>
-            <Text className={styles.mergeLabel}>Merge Fields</Text>
-            <div className={styles.mergeFields}>
-              {mergeFields.map((field) => (
-                <Badge key={field} appearance="outline" size="small">
-                  {`{{${field}}}`}
-                </Badge>
-              ))}
-            </div>
+            <Text className={styles.mergeLabel}>Fill in merge fields</Text>
+            {mergeFields.map((field) => (
+              <div key={field} className={styles.mergeField}>
+                <Text className={styles.mergeFieldLabel}>{formatFieldLabel(field)}</Text>
+                <Input
+                  className={styles.mergeFieldInput}
+                  placeholder={`Enter ${formatFieldLabel(field).toLowerCase()}…`}
+                  value={mergeValues[field] ?? ""}
+                  onChange={(_e, data) => setFieldValue(field, data.value)}
+                  size="small"
+                />
+              </div>
+            ))}
           </div>
         )}
 
