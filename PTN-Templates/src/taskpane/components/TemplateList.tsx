@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Input, Text, makeStyles, tokens } from "@fluentui/react-components";
-import { Search24Regular, ChevronRight20Regular } from "@fluentui/react-icons";
+import { Search24Regular, ChevronRight20Regular, ChevronLeft20Regular } from "@fluentui/react-icons";
 import { Template } from "../types/template";
 
 interface TemplateListProps {
@@ -22,48 +22,38 @@ const useStyles = makeStyles({
   searchInput: {
     width: "100%",
   },
-  categoryRow: {
+  // Back header shown when inside a category
+  backHeader: {
     display: "flex",
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: "6px",
+    alignItems: "center",
+    gap: "4px",
     padding: "8px 12px",
     borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
-    flexShrink: 0,
-  },
-  pill: {
-    display: "inline-flex",
-    alignItems: "center",
-    padding: "3px 10px",
-    borderRadius: "999px",
-    fontSize: tokens.fontSizeBase200,
-    fontWeight: tokens.fontWeightRegular,
     cursor: "pointer",
-    whiteSpace: "nowrap",
     flexShrink: 0,
-    border: `1px solid ${tokens.colorNeutralStroke1}`,
-    backgroundColor: tokens.colorNeutralBackground1,
-    color: tokens.colorNeutralForeground1,
-    transition: "background-color 0.15s, color 0.15s",
-    userSelect: "none",
     ":hover": {
       backgroundColor: tokens.colorNeutralBackground1Hover,
     },
   },
-  pillActive: {
-    backgroundColor: "#1a1a2e",
-    color: tokens.colorNeutralForegroundOnBrand,
-    border: "1px solid #1a1a2e",
-    ":hover": {
-      backgroundColor: "#16213e",
-    },
+  backIcon: {
+    color: tokens.colorNeutralForeground3,
+  },
+  backLabel: {
+    fontSize: tokens.fontSizeBase200,
+    color: tokens.colorNeutralForeground3,
+    marginRight: "4px",
+  },
+  categoryTitle: {
+    fontWeight: tokens.fontWeightSemibold,
+    fontSize: tokens.fontSizeBase300,
+    color: tokens.colorNeutralForeground1,
   },
   list: {
     flex: 1,
     overflowY: "auto",
     padding: "8px 0",
   },
-  // --- All view: category cards ---
+  // All view: category cards
   categoryCard: {
     display: "flex",
     alignItems: "center",
@@ -95,7 +85,7 @@ const useStyles = makeStyles({
     color: tokens.colorNeutralForeground3,
     flexShrink: 0,
   },
-  // --- Category view: template name rows ---
+  // Category view: template name rows
   templateRow: {
     display: "flex",
     alignItems: "center",
@@ -116,7 +106,7 @@ const useStyles = makeStyles({
     color: tokens.colorNeutralForeground3,
     flexShrink: 0,
   },
-  // --- Search results (show name + category label) ---
+  // Search results
   categorySection: {
     marginBottom: "4px",
   },
@@ -139,16 +129,12 @@ const useStyles = makeStyles({
 const TemplateList: React.FC<TemplateListProps> = ({ templates, onSelect }) => {
   const styles = useStyles();
   const [searchQuery, setSearchQuery] = React.useState("");
-  const [activeCategory, setActiveCategory] = React.useState("All");
+  const [activeCategory, setActiveCategory] = React.useState<string | null>(null);
 
-  const categories = React.useMemo(() => {
-    const cats = Array.from(new Set(templates.map((t) => t.category)));
-    return ["All", ...cats];
-  }, [templates]);
+  const categories = React.useMemo(() => Array.from(new Set(templates.map((t) => t.category))), [templates]);
 
   const isSearching = searchQuery.trim().length > 0;
 
-  // Templates filtered by search (used when searching)
   const searchFiltered = React.useMemo(() => {
     if (!isSearching) return templates;
     const q = searchQuery.toLowerCase();
@@ -160,7 +146,6 @@ const TemplateList: React.FC<TemplateListProps> = ({ templates, onSelect }) => {
     );
   }, [templates, searchQuery, isSearching]);
 
-  // Grouped for search results view
   const searchGrouped = React.useMemo(() => {
     const groups: Record<string, Template[]> = {};
     searchFiltered.forEach((t) => {
@@ -170,13 +155,6 @@ const TemplateList: React.FC<TemplateListProps> = ({ templates, onSelect }) => {
     return groups;
   }, [searchFiltered]);
 
-  // Templates in the active category
-  const categoryTemplates = React.useMemo(() => {
-    if (activeCategory === "All") return [];
-    return templates.filter((t) => t.category === activeCategory);
-  }, [templates, activeCategory]);
-
-  // Category counts for the All view
   const categoryCounts = React.useMemo(() => {
     const counts: Record<string, number> = {};
     templates.forEach((t) => {
@@ -185,13 +163,12 @@ const TemplateList: React.FC<TemplateListProps> = ({ templates, onSelect }) => {
     return counts;
   }, [templates]);
 
-  const handleCategoryClick = (cat: string) => {
-    setActiveCategory(cat);
-    setSearchQuery("");
-  };
+  const categoryTemplates = React.useMemo(() => {
+    if (!activeCategory) return [];
+    return templates.filter((t) => t.category === activeCategory);
+  }, [templates, activeCategory]);
 
   const renderContent = () => {
-    // Search results override everything
     if (isSearching) {
       if (Object.keys(searchGrouped).length === 0) {
         return <div className={styles.empty}>No templates found</div>;
@@ -209,12 +186,10 @@ const TemplateList: React.FC<TemplateListProps> = ({ templates, onSelect }) => {
       ));
     }
 
-    // All view: category summary cards
-    if (activeCategory === "All") {
-      const cats = categories.filter((c) => c !== "All");
-      if (cats.length === 0) return <div className={styles.empty}>No templates found</div>;
-      return cats.map((cat) => (
-        <div key={cat} className={styles.categoryCard} onClick={() => handleCategoryClick(cat)}>
+    if (!activeCategory) {
+      if (categories.length === 0) return <div className={styles.empty}>No templates found</div>;
+      return categories.map((cat) => (
+        <div key={cat} className={styles.categoryCard} onClick={() => setActiveCategory(cat)}>
           <div className={styles.categoryCardLeft}>
             <Text className={styles.categoryCardName}>{cat}</Text>
             <Text className={styles.categoryCardCount}>
@@ -226,7 +201,6 @@ const TemplateList: React.FC<TemplateListProps> = ({ templates, onSelect }) => {
       ));
     }
 
-    // Category view: names only
     if (categoryTemplates.length === 0) {
       return <div className={styles.empty}>No templates found</div>;
     }
@@ -251,17 +225,13 @@ const TemplateList: React.FC<TemplateListProps> = ({ templates, onSelect }) => {
         />
       </div>
 
-      <div className={styles.categoryRow}>
-        {categories.map((cat) => (
-          <span
-            key={cat}
-            className={`${styles.pill} ${cat === activeCategory ? styles.pillActive : ""}`}
-            onClick={() => handleCategoryClick(cat)}
-          >
-            {cat}
-          </span>
-        ))}
-      </div>
+      {activeCategory && !isSearching && (
+        <div className={styles.backHeader} onClick={() => setActiveCategory(null)}>
+          <ChevronLeft20Regular className={styles.backIcon} />
+          <Text className={styles.backLabel}>All</Text>
+          <Text className={styles.categoryTitle}>{activeCategory}</Text>
+        </div>
+      )}
 
       <div className={styles.list}>{renderContent()}</div>
     </div>
